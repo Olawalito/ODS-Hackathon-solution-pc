@@ -20,6 +20,7 @@ export function AuthScreen() {
     event.preventDefault()
     setPending(true)
     const form = new FormData(event.currentTarget)
+
     const payload: Record<string, unknown> = {
       email: form.get('email'),
       password: form.get('password'),
@@ -29,9 +30,9 @@ export function AuthScreen() {
       Object.assign(payload, {
         name: form.get('name'),
         role,
-        matricNumber: form.get('matricNumber'),
-        lecturerSignupCode: form.get('lecturerSignupCode'),
-        ...(role === 'student' ? { faceDescriptor: descriptor } : {}),
+        ...(role === 'student'
+          ? { matricNumber: form.get('matricNumber'), faceDescriptor: descriptor }
+          : { lecturerSignupCode: form.get('lecturerSignupCode') }),
       })
     }
 
