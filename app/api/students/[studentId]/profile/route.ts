@@ -11,8 +11,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!student) return NextResponse.json({ error: 'Student not found.' }, { status: 404 })
   const ownedCourses = await db.select({ id: courses.id, code: courses.code, title: courses.title }).from(courses).where(eq(courses.lecturerId, auth.user.id))
   const courseIds = ownedCourses.map((course) => course.id)
-  const held = courseIds.length ? await db.select({ id: sessions.id, title: sessions.title, code: sessions.code, startsAt: sessions.startsAt, courseId: sessions.courseId }).from(sessions).where(inArray(sessions.courseId, courseIds)) : []
+  if (courseIds.length === 0) return NextResponse.json({ error: 'Student not found.' }, { status: 404 })
+  const held = await db.select({ id: sessions.id, title: sessions.title, code: sessions.code, startsAt: sessions.startsAt, courseId: sessions.courseId }).from(sessions).where(inArray(sessions.courseId, courseIds))
   const attended = held.length ? await db.select({ sessionId: attendance.sessionId, status: attendance.status, createdAt: attendance.createdAt }).from(attendance).where(and(eq(attendance.studentId, studentId), inArray(attendance.sessionId, held.map((session) => session.id)))) : []
+  if (attended.length === 0) return NextResponse.json({ error: 'Student not found.' }, { status: 404 })
   const attendanceMap = new Map(attended.map((row) => [row.sessionId, row]))
   const courseMap = new Map(ownedCourses.map((course) => [course.id, course]))
   const list = held.map((session) => ({ ...session, course: courseMap.get(session.courseId), attended: attendanceMap.has(session.id), markedAt: attendanceMap.get(session.id)?.createdAt ?? null }))

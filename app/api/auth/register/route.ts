@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { hash } from 'bcryptjs'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
@@ -12,6 +12,14 @@ export async function POST(request: NextRequest) {
     const parsed = registerSchema.safeParse(await request.json())
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Check the information and try again.' }, { status: 400 })
     const data = parsed.data
+    if (data.role === 'lecturer') {
+      const expectedCode = process.env.LECTURER_SIGNUP_CODE
+      const submittedCode = data.lecturerSignupCode ?? ''
+      const expectedBuffer = Buffer.from(expectedCode ?? '')
+      const submittedBuffer = Buffer.from(submittedCode)
+      if (expectedBuffer.length < 24) return NextResponse.json({ error: 'Lecturer sign-up is not configured. Contact your BITMARK administrator.' }, { status: 503 })
+      if (expectedBuffer.length !== submittedBuffer.length || !timingSafeEqual(expectedBuffer, submittedBuffer)) return NextResponse.json({ error: 'Lecturer invitation code is incorrect.' }, { status: 403 })
+    }
     const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, data.email)).limit(1)
     if (existing) return NextResponse.json({ error: 'An account with those details already exists.' }, { status: 409 })
     if (data.matricNumber) {

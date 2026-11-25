@@ -22,7 +22,7 @@ export function CourseWorkspace({ courseId, code, title }: { courseId: string; c
       const position = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }))
       const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: form.get('title'), radiusMeters: Number(form.get('radiusMeters')), lat: position.coords.latitude, lng: position.coords.longitude }) })
       const result = await response.json(); if (!response.ok) throw new Error(result.error)
-      event.currentTarget.reset(); toast.success('Session created. Your class code is ready.'); await mutate()
+      formElement.reset(); toast.success('Session created. Your class code is ready.'); await mutate()
     } catch (error) { toast.error(error instanceof GeolocationPositionError && error.code === error.PERMISSION_DENIED ? 'Location permission was denied. Allow location access to create a session.' : error instanceof Error ? error.message : 'Could not create a session.') }
     finally { setPending(false) }
   }

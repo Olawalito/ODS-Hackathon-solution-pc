@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt'
 const COOKIE_NAME = 'bitmark_session'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value
   const user = token ? await verifyToken(token) : null
   const path = request.nextUrl.pathname

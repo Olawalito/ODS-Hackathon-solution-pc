@@ -16,9 +16,10 @@ Create `.env.local` in the project root:
 ```env
 DATABASE_URL="your-postgresql-connection-string"
 JWT_SECRET="a-random-secret-at-least-32-characters-long"
+LECTURER_SIGNUP_CODE="a-private-random-invitation-code-at-least-24-characters"
 ```
 
-Generate a strong secret with `openssl rand -base64 32`. Never commit `.env.local` or share `JWT_SECRET`. `DATABASE_URL` should use your PostgreSQL provider's pooled runtime connection string. The connected BITMARK Neon database already has its tables; `scripts/schema.sql` is provided for another empty PostgreSQL database.
+Generate a strong `JWT_SECRET` with `openssl rand -base64 32`. `LECTURER_SIGNUP_CODE` must be a private random value of at least 24 characters; share it only with approved lecturers. Lecturer signup is disabled until it is configured. Never commit `.env.local` or share either secret. `DATABASE_URL` should use your PostgreSQL provider's pooled runtime connection string. The connected BITMARK Neon database already has its tables; `scripts/schema.sql` is provided for another empty PostgreSQL database.
 
 ## Run locally
 
