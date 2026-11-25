@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     const parsed = registerSchema.safeParse(await request.json())
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Check the information and try again.' }, { status: 400 })
     const data = parsed.data
+
     if (data.role === 'lecturer') {
       const expectedCode = process.env.LECTURER_SIGNUP_CODE
       const submittedCode = data.lecturerSignupCode ?? ''
@@ -20,13 +21,25 @@ export async function POST(request: NextRequest) {
       if (expectedBuffer.length < 24) return NextResponse.json({ error: 'Lecturer sign-up is not configured. Contact your BITMARK administrator.' }, { status: 503 })
       if (expectedBuffer.length !== submittedBuffer.length || !timingSafeEqual(expectedBuffer, submittedBuffer)) return NextResponse.json({ error: 'Lecturer invitation code is incorrect.' }, { status: 403 })
     }
+
     const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, data.email)).limit(1)
     if (existing) return NextResponse.json({ error: 'An account with those details already exists.' }, { status: 409 })
+
     if (data.matricNumber) {
       const [matric] = await db.select({ id: users.id }).from(users).where(eq(users.matricNumber, data.matricNumber)).limit(1)
       if (matric) return NextResponse.json({ error: 'An account with those details already exists.' }, { status: 409 })
     }
-    const user = { id: randomUUID(), name: data.name, email: data.email, passwordHash: await hash(data.password, 12), role: data.role, matricNumber: data.role === 'student' ? data.matricNumber || null : null, faceDescriptor: data.role === 'student' ? data.faceDescriptor! : null }
+
+    const user = {
+      id: randomUUID(),
+      name: data.name,
+      email: data.email,
+      passwordHash: await hash(data.password, 12),
+      role: data.role,
+      matricNumber: data.role === 'student' ? data.matricNumber || null : null,
+      faceDescriptor: data.role === 'student' ? data.faceDescriptor : null,
+    }
+
     await db.insert(users).values(user)
     const token = await issueToken(user)
     const response = NextResponse.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } }, { status: 201 })
