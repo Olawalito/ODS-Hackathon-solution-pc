@@ -7,30 +7,217 @@ import { ArrowLeft, ArrowUpRight, Copy, MapPin, Plus, Radio, X } from 'lucide-re
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 
-type Session = { id: string; title: string; code: string; startsAt: string; expiresAt: string; isActive: boolean; radiusMeters: number }
-const fetcher = async (url: string) => { const res = await fetch(url); const data = await res.json(); if (!res.ok) throw new Error(data.error); return data }
+type Session = {
+  id: string
+  title: string
+  code: string
+  startsAt: string
+  expiresAt: string
+  isActive: boolean
+  radiusMeters: number
+}
+
+const fetcher = async (url: string) => {
+  const response = await fetch(url)
+  const data = await response.json()
+  if (!response.ok) throw new Error(data.error || 'Could not load sessions.')
+  return data
+}
+
 export function CourseWorkspace({ courseId, code, title }: { courseId: string; code: string; title: string }) {
   const endpoint = `/api/courses/${courseId}/sessions`
   const { data, error, mutate } = useSWR<{ sessions: Session[] }>(endpoint, fetcher, { refreshInterval: 5000 })
   const [pending, setPending] = useState(false)
-  async function create(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setPending(true)
+
+  async function createSession(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (pending) return
+
     const formElement = event.currentTarget
     const form = new FormData(formElement)
-    if (!navigator.geolocation) { toast.error('Location is unavailable in this browser.'); setPending(false); return }
+    const titleValue = String(form.get('title') ?? '').trim()
+    const radiusMeters = Number(form.get('radiusMeters'))
+
+    if (titleValue.length < 2) {
+      toast.error('Enter a session title.')
+      return
+    }
+
+    if (!navigator.geolocation) {
+      toast.error('Location is unavailable in this browser.')
+      return
+    }
+
+    setPending(true)
+
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }))
-      const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: form.get('title'), radiusMeters: Number(form.get('radiusMeters')), lat: position.coords.latitude, lng: position.coords.longitude }) })
-      const result = await response.json(); if (!response.ok) throw new Error(result.error)
-      formElement.reset(); toast.success('Session created. Your class code is ready.'); await mutate()
-    } catch (error) { toast.error(error instanceof GeolocationPositionError && error.code === error.PERMISSION_DENIED ? 'Location permission was denied. Allow location access to create a session.' : error instanceof Error ? error.message : 'Could not create a session.') }
-    finally { setPending(false) }
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        })
+      })
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: titleValue,
+          radiusMeters,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }),
+      })
+
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not create a session.')
+
+      formElement.reset()
+      toast.success('Session created. Your class code is ready.')
+      await mutate()
+    } catch (error) {
+      if (typeof GeolocationPositionError !== 'undefined' && error instanceof GeolocationPositionError) {
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error('Location permission was denied. Allow location access to create a session.')
+        } else {
+          toast.error('Could not get your location. Check your location settings and try again.')
+        }
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Could not create a session.')
+      }
+    } finally {
+      setPending(false)
+    }
   }
-  async function closeSession(sessionId: string) { try { const response = await fetch(`/api/sessions/${sessionId}`, { method: 'PATCH' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); toast.success('Session closed.'); await mutate() } catch (e) { toast.error(e instanceof Error ? e.message : 'Could not close session.') } }
-  async function copy(code: string) { try { await navigator.clipboard.writeText(code); toast.success('Class code copied.') } catch { toast.error('Could not copy class code.') } }
-  return <main className="min-h-screen bg-[#f8f9fb] text-slate-950"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4"><Link href="/lecturer" className="text-sm font-bold tracking-[0.16em]">BITMARK<span className="ml-2 text-[#1e4fd4]">/ LECTURER</span></Link><Link href="/lecturer" className="text-sm text-slate-500 hover:text-slate-950">All courses</Link></div></header>
-    <div className="mx-auto max-w-5xl px-5 py-8 sm:py-12"><Link href="/lecturer" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-950"><ArrowLeft className="size-4" />Back to courses</Link><p className="mt-7 text-xs font-semibold tracking-[0.2em] text-[#1e4fd4]">{code}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1><div className="mt-8 grid gap-6 lg:grid-cols-[0.75fr_1fr]">
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-blue-50 text-[#1e4fd4]"><Plus className="size-5" /></div><div><h2 className="font-semibold">Create session</h2><p className="text-sm text-slate-500">2-hour session, with your current location.</p></div></div><form onSubmit={create} className="mt-5 flex flex-col gap-4"><label className="flex flex-col gap-1.5 text-sm font-medium">Session title<input name="title" required maxLength={120} placeholder="Week 4 lecture" className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-[#1e4fd4]" /></label><label className="flex flex-col gap-1.5 text-sm font-medium">Allowed radius <span className="text-xs font-normal text-slate-500">metres</span><input name="radiusMeters" type="number" min={10} max={1000} defaultValue={50} required className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-[#1e4fd4]" /></label><div className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600"><MapPin className="mt-0.5 size-4 shrink-0 text-[#1e4fd4]" />Allow location access. This location becomes the center of the attendance area.</div><Button disabled={pending} className="h-11 rounded-xl bg-[#1e4fd4] text-white hover:bg-[#1741b8]">{pending ? 'Getting location…' : 'Create attendance session'}</Button></form></section>
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><div className="flex items-center justify-between"><div><h2 className="font-semibold">Sessions</h2><p className="mt-1 text-sm text-slate-500">Past and currently active sessions.</p></div><Radio className="size-5 text-slate-400" /></div><div className="mt-5 flex flex-col gap-3">{error ? <p className="py-5 text-sm text-rose-600">Could not load sessions.</p> : !data ? <p className="py-5 text-sm text-slate-500">Loading sessions…</p> : data.sessions.length === 0 ? <p className="py-8 text-center text-sm text-slate-500">No sessions yet. Create one to share an attendance code.</p> : data.sessions.map((session) => { const active = session.isActive && new Date(session.expiresAt) > new Date(); return <article key={session.id} className="rounded-2xl border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{session.title}</p><p className="mt-1 text-xs text-slate-500">{new Date(session.startsAt).toLocaleString()} · {session.radiusMeters} m radius</p></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{active ? 'Active' : 'Closed'}</span></div>{active && <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f4f6ff] px-4 py-3"><span className="font-mono text-2xl font-bold tracking-[0.25em] text-[#1e4fd4]">{session.code}</span><Button type="button" variant="outline" size="sm" onClick={() => copy(session.code)} aria-label="Copy class code"><Copy data-icon="inline-start" />Copy</Button></div>}<div className="mt-3 flex items-center justify-between"><Link href={`/lecturer/sessions/${session.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-[#1e4fd4] hover:underline">Evaluation<ArrowUpRight className="size-4" /></Link>{active && <button onClick={() => closeSession(session.id)} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-rose-600"><X className="size-3.5" />Close session</button>}</div></article> })}</div></section>
-    </div></div></main>
+
+  async function closeSession(sessionId: string) {
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}`, { method: 'PATCH' })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not close session.')
+      toast.success('Session closed.')
+      await mutate()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not close session.')
+    }
+  }
+
+  async function copyClassCode(classCode: string) {
+    try {
+      await navigator.clipboard.writeText(classCode)
+      toast.success('Class code copied.')
+    } catch {
+      toast.error('Could not copy class code.')
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f8f9fb] text-slate-950">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+          <Link href="/lecturer" className="text-sm font-bold tracking-[0.16em]">
+            BITMARK<span className="ml-2 text-[#1e4fd4]">/ LECTURER</span>
+          </Link>
+          <Link href="/lecturer" className="text-sm text-slate-500 hover:text-slate-950">All courses</Link>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-5xl px-5 py-8 sm:py-12">
+        <Link href="/lecturer" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-950">
+          <ArrowLeft className="size-4" />Back to courses
+        </Link>
+        <p className="mt-7 text-xs font-semibold tracking-[0.2em] text-[#1e4fd4]">{code}</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-[0.75fr_1fr]">
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-xl bg-blue-50 text-[#1e4fd4]"><Plus className="size-5" /></div>
+              <div>
+                <h2 className="font-semibold">Create session</h2>
+                <p className="text-sm text-slate-500">2-hour session, with your current location.</p>
+              </div>
+            </div>
+
+            <form onSubmit={createSession} className="mt-5 flex flex-col gap-4">
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
+                Session title
+                <input name="title" required minLength={2} maxLength={120} placeholder="Week 4 lecture" className="h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#1e4fd4]" />
+              </label>
+
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
+                Allowed radius <span className="text-xs font-normal text-slate-500">metres</span>
+                <input name="radiusMeters" type="number" min={10} max={1000} defaultValue={50} required className="h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#1e4fd4]" />
+              </label>
+
+              <div className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+                <MapPin className="mt-0.5 size-4 shrink-0 text-[#1e4fd4]" />
+                Allow location access. This location becomes the center of the attendance area.
+              </div>
+
+              <Button type="submit" disabled={pending} className="h-11 rounded-xl bg-[#1e4fd4] text-white hover:bg-[#1741b8]">
+                {pending ? 'Getting location…' : 'Create attendance session'}
+              </Button>
+            </form>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">Sessions</h2>
+                <p className="mt-1 text-sm text-slate-500">Past and currently active sessions.</p>
+              </div>
+              <Radio className="size-5 text-slate-400" />
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3">
+              {error ? (
+                <p className="py-5 text-sm text-rose-600">Could not load sessions.</p>
+              ) : !data ? (
+                <p className="py-5 text-sm text-slate-500">Loading sessions…</p>
+              ) : data.sessions.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-500">No sessions yet. Create one to share an attendance code.</p>
+              ) : data.sessions.map((session) => {
+                const active = session.isActive && new Date(session.expiresAt) > new Date()
+                return (
+                  <article key={session.id} className="rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{session.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{new Date(session.startsAt).toLocaleString()} · {session.radiusMeters} m radius</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                        {active ? 'Active' : 'Closed'}
+                      </span>
+                    </div>
+
+                    {active && (
+                      <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f4f6ff] px-4 py-3">
+                        <span className="font-mono text-2xl font-bold tracking-[0.25em] text-[#1e4fd4]">{session.code}</span>
+                        <Button type="button" variant="outline" size="sm" onClick={() => copyClassCode(session.code)} aria-label="Copy class code">
+                          <Copy data-icon="inline-start" />Copy
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <Link href={`/lecturer/sessions/${session.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-[#1e4fd4] hover:underline">
+                        Evaluation<ArrowUpRight className="size-4" />
+                      </Link>
+                      {active && (
+                        <button type="button" onClick={() => closeSession(session.id)} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-rose-600">
+                          <X className="size-3.5" />Close session
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  )
 }
