@@ -32,13 +32,13 @@ export function AuthScreen() {
     <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-5 py-10 lg:grid-cols-[1fr_420px] lg:px-10">
       <section className="hidden lg:block">
         <a href="/" className="inline-flex items-center gap-2 text-sm font-bold tracking-[0.16em]"><span className="grid size-9 place-items-center rounded-xl bg-[#1e4fd4] text-white"><Fingerprint className="size-5" /></span>BITMARK</a>
-        <div className="mt-24 max-w-xl"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1e4fd4]">Attendance, verified</p><h1 className="mt-5 text-6xl font-semibold leading-[1.04] tracking-[-0.06em]">Show up.<br />Be counted.</h1><p className="mt-6 max-w-md text-lg leading-8 text-slate-600">A more trustworthy way to take attendance. Verified by where you are and who you are.</p></div>
-        <div className="mt-14 flex items-center gap-3 text-sm text-slate-600"><ShieldCheck className="size-5 text-[#1e4fd4]" />Your face image is never stored. Only a secure descriptor.</div>
+        <div className="mt-24 max-w-xl"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1e4fd4]">Attendance, verified</p><h1 className="mt-5 text-6xl font-semibold leading-[1.04] tracking-[-0.06em]">Show up.<br />Be counted.</h1><p className="mt-6 max-w-md text-lg leading-8 text-slate-950">A more trustworthy way to take attendance. Verified by where you are and who you are.</p></div>
+        <div className="mt-14 flex items-center gap-3 text-sm text-slate-950"><ShieldCheck className="size-5 text-[#1e4fd4]" />Your face image is never stored. Only a secure descriptor.</div>
       </section>
       <section className="mx-auto w-full max-w-md">
-        <div className="mb-8 flex items-center justify-between lg:hidden"><a href="/" className="inline-flex items-center gap-2 text-sm font-bold tracking-[0.16em]"><span className="grid size-9 place-items-center rounded-xl bg-[#1e4fd4] text-white"><Fingerprint className="size-5" /></span>BITMARK</a><span className="text-xs text-slate-500">Campus attendance</span></div>
+        <div className="mb-8 flex items-center justify-between lg:hidden"><a href="/" className="inline-flex items-center gap-2 text-sm font-bold tracking-[0.16em]"><span className="grid size-9 place-items-center rounded-xl bg-[#1e4fd4] text-white"><Fingerprint className="size-5" /></span>BITMARK</a><span className="text-xs text-slate-950">Campus attendance</span></div>
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.3)] sm:p-8">
-          <div className="mb-7"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1e4fd4]">{mode === 'signin' ? 'Your campus, in sync' : 'Get started'}</p><h2 className="mt-2 text-2xl font-semibold tracking-tight">{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h2><p className="mt-2 text-sm text-slate-500">{mode === 'signin' ? 'Sign in to continue to BITMARK.' : 'Choose your role and complete your profile.'}</p></div>
+          <div className="mb-7"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1e4fd4]">{mode === 'signin' ? 'Your campus, in sync' : 'Get started'}</p><h2 className="mt-2 text-2xl font-semibold tracking-tight">{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h2><p className="mt-2 text-sm text-slate-950">{mode === 'signin' ? 'Sign in to continue to BITMARK.' : 'Choose your role and complete your profile.'}</p></div>
           <form onSubmit={submit} className="flex flex-col gap-4">
             {mode === 'register' && <>
               <label className="flex flex-col gap-1.5 text-sm font-medium">Full name<input name="name" required minLength={2} maxLength={100} autoComplete="name" className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#1e4fd4] focus:ring-2 focus:ring-[#1e4fd4]/15" placeholder="Alex Morgan" /></label>
@@ -50,9 +50,9 @@ export function AuthScreen() {
             {mode === 'register' && role === 'student' && <FaceCapture onDescriptor={setDescriptor} />}
             <Button className="mt-1 h-12 rounded-xl bg-[#1e4fd4] text-white hover:bg-[#1741b8]" type="submit" disabled={pending || (mode === 'register' && role === 'student' && !descriptor)}>{pending ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}{!pending && <ArrowRight data-icon="inline-end" />}</Button>
           </form>
-          <p className="mt-6 text-center text-sm text-slate-500">{mode === 'signin' ? 'New to BITMARK?' : 'Already have an account?'} <button type="button" onClick={() => { setMode(mode === 'signin' ? 'register' : 'signin'); setDescriptor(null) }} className="font-semibold text-[#1e4fd4] hover:underline">{mode === 'signin' ? 'Create account' : 'Sign in'}</button></p>
+          <p className="mt-6 text-center text-sm text-slate-950">{mode === 'signin' ? 'New to BITMARK?' : 'Already have an account?'} <button type="button" onClick={() => { setMode(mode === 'signin' ? 'register' : 'signin'); setDescriptor(null) }} className="font-semibold text-[#1e4fd4] hover:underline">{mode === 'signin' ? 'Create account' : 'Sign in'}</button></p>
         </div>
-        <p className="mt-5 text-center text-xs leading-5 text-slate-500">By continuing, you agree to use BITMARK only for authorized university attendance.</p>
+        <p className="mt-5 text-center text-xs leading-5 text-slate-950">By continuing, you agree to use BITMARK only for authorized university attendance.</p>
       </section>
     </div>
   </main>
