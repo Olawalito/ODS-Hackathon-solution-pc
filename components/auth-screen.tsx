@@ -18,7 +18,15 @@ export function AuthScreen() {
     event.preventDefault(); setPending(true)
     const form = new FormData(event.currentTarget)
     const payload: Record<string, unknown> = { email: form.get('email'), password: form.get('password') }
-    if (mode === 'register') Object.assign(payload, { name: form.get('name'), role, matricNumber: form.get('matricNumber'), ...(role === 'student' ? { faceDescriptor: descriptor } : {}) })
+    if (mode === 'register') {
+      Object.assign(payload, {
+        name: form.get('name'),
+        role,
+        ...(role === 'student'
+          ? { matricNumber: String(form.get('matricNumber') ?? ''), faceDescriptor: descriptor }
+          : { lecturerSignupCode: String(form.get('lecturerSignupCode') ?? '') }),
+      })
+    }
     try {
       const response = await fetch(`/api/auth/${mode === 'signin' ? 'login' : 'register'}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await response.json()
